@@ -1,3 +1,8 @@
+const user = JSON.parse(localStorage.getItem("user"));
+
+if (!user) {
+    window.location.href = "login.html";
+}
 // ===== TEMP MEMORY (later connect Firebase)
 let memories = [];
 
