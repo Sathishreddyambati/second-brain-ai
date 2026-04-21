@@ -36,69 +36,32 @@ function handleInput() {
 }
 
 // ===== SAVE MEMORY
-function saveMemory(text) {
-
-    // extract object + location (simple but clean)
-    let words = text.split(" ");
-    let object = "";
-    let location = "";
-
-    for (let i = 0; i < words.length; i++) {
-        if (words[i] === "my") {
-            object = words[i + 1]; // keys, phone, laptop
-        }
-        if (
-            words[i] === "in" ||
-            words[i] === "on" ||
-            words[i] === "at"
-        ) {
-            location = words.slice(i + 1).join(" ");
-            break;
-        }
-    }
-
-    if (!object || !location) {
-        showResult("❌ Couldn't understand properly");
-        return;
-    }
-
-    memories.push({
+async function saveMemory(text, object, location) {
+    await addDoc(collection(db, "users", user.uid, "memories"), {
+        text,
         object,
         location,
-        text,
         time: Date.now()
     });
-
-    showResult(`✅ Saved: Your ${object} is in ${location}`);
 }
-
 // ===== FIND MEMORY
-function findMemory(query) {
+async function findMemory(object) {
 
-    let words = query.split(" ");
-    let object = "";
+    const snapshot = await getDocs(collection(db, "users", user.uid, "memories"));
 
-    for (let w of words) {
-        if (w !== "where" && w !== "is" && w !== "my") {
-            object = w;
-            break;
+    let latest = null;
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+
+        if (data.object === object) {
+            if (!latest || data.time > latest.time) {
+                latest = data;
+            }
         }
-    }
+    });
 
-    let result = memories
-        .filter(m => m.object === object)
-        .sort((a, b) => b.time - a.time)[0];
-
-    if (result) {
-        showResult(`📍 Your ${result.object} is in ${result.location}`);
-    } else {
-        showResult("❌ Not found");
-    }
-}
-
-// ===== SHOW RESULT
-function showResult(msg) {
-    document.getElementById("result").innerText = msg;
+    return latest;
 }
 
 // ===== VOICE INPUT
