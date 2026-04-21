@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Second Brain AI</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDW1OHe8pfRrJFM1UUaIkCca57CppVJD3k",
+  authDomain: "secondbrain-87cd7.firebaseapp.com",
+  projectId: "secondbrain-87cd7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// SAVE MEMORY
+window.saveMemory = async function(item, location){
+    await addDoc(collection(db, "memories"), {
+        item, location,
+        time: new Date().toISOString()
+    });
+    loadHistory();
+};
+
+// LOAD MEMORIES
+window.loadHistory = async function(){
+    const querySnapshot = await getDocs(collection(db, "memories"));
+    const list = document.getElementById("historyList");
+    list.innerHTML = "";
+
+    querySnapshot.forEach((docSnap)=>{
+        let m = docSnap.data();
+
+        let div = document.createElement("div");
+        div.className = "bg-slate-800 p-3 mt-2 rounded";
+
+        div.innerHTML = `
+        ${m.item} → ${m.location}
+        <button onclick="deleteMem('${docSnap.id}')" class="ml-3 text-red-400">Delete</button>
+        `;
+
+        list.appendChild(div);
+    });
+};
+
+// DELETE
+window.deleteMem = async function(id){
+    await deleteDoc(doc(db, "memories", id));
+    loadHistory();
+};
+
+// FIND MEMORY
+window.findMemory = async function(item){
+    const querySnapshot = await getDocs(collection(db, "memories"));
+    let found = null;
+
+    querySnapshot.forEach((docSnap)=>{
+        let m = docSnap.data();
+        if(m.item.includes(item)) found = m;
+    });
+
+    return found;
+};
+</script>
+
+<style>
+body { background:#0f172a; color:white; font-family:Arial; }
+.glass { background:#1e293b; border-radius:15px; padding:20px; }
+.btn { background:#7c3aed; padding:10px 20px; border-radius:10px; margin:5px; }
+input { width:100%; padding:12px; border-radius:10px; color:black; }
+</style>
+</head>
+
+<body class="p-5">
+
+<!-- NAV -->
+<div class="flex justify-between mb-6">
+<h1 class="text-2xl font-bold">🧠 Second Brain AI</h1>
+
+<div>
+<button onclick="show('home')" class="btn">Home</button>
+<button onclick="show('history')" class="btn">History</button>
+<button onclick="show('settings')" class="btn">Settings</button>
+</div>
+</div>
+
+<!-- HOME -->
+<div id="home" class="glass">
+<input id="input" placeholder="Ask or save memory..." />
+<br><br>
+
+<button onclick="processInput()" class="btn">Submit</button>
+<button onclick="startVoice()" class="btn">🎤 Voice</button>
+
+<div id="output" class="mt-5"></div>
+</div>
+
+<!-- HISTORY -->
+<div id="history" class="glass hidden">
+<h2 class="text-xl mb-4">📜 Memory History</h2>
+<div id="historyList"></div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings" class="glass hidden">
+<label>
+<input type="checkbox" id="voiceToggle" checked> Voice ON/OFF
+</label>
+</div>
+
+<script>
+
+// NAVIGATION
+function show(page){
+["home","history","settings"].forEach(p=>{
+document.getElementById(p).classList.add("hidden");
+});
+document.getElementById(page).classList.remove("hidden");
+
+if(page==="history") loadHistory();
+}
+
+// MAIN LOGIC
+async function processInput(){
+
+let text = document.getElementById("input").value.toLowerCase().trim();
+if(!text) return;
+
+// QUESTION
+if(text.includes("where") || text.includes("ekkada")){
+
+let words = text.split(" ");
+let ignore = ["where","is","are","my","the","ekkada","na"];
+let item = words.filter(w=>!ignore.includes(w)).join(" ");
+
+let res = await findMemory(item);
+
+if(res){
+speak(`Your ${res.item} is in ${res.location}`);
+showOutput(`📍 Your ${res.item} is in ${res.location}`);
+}else{
+showOutput("❌ Not found");
+}
+
+}else{
+
+// SAVE
+let match = text.match(/(keys|phone|wallet|charger|bag|laptop).*(in|at|on|near|under|inside)\s(.+)/);
+
+if(match){
+let item = match[1];
+let location = match[3];
+
+await saveMemory(item, location);
+
+showOutput(`✅ Saved: ${item} → ${location}`);
+speak("Saved");
+
+}else{
+showOutput("Try: I kept my keys in bag");
+}
+
+}
+
+document.getElementById("input").value="";
+}
+
+// OUTPUT
+function showOutput(msg){
+document.getElementById("output").innerText = msg;
+}
+
+// VOICE INPUT
+function startVoice(){
+
+if(!document.getElementById("voiceToggle").checked){
+alert("Voice OFF");
+return;
+}
+
+let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = "en-IN";
+
+recognition.onresult = function(e){
+let text = e.results[0][0].transcript;
+document.getElementById("input").value=text;
+processInput();
+};
+
+recognition.start();
+}
+
+// SPEAK
+function speak(text){
+let speech = new SpeechSynthesisUtterance(text);
+speech.lang="en-IN";
+speechSynthesis.speak(speech);
+}
+
+</script>
+
+</body>
+</html>
