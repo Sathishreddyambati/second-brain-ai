@@ -75,7 +75,26 @@ window.findMemory = async function(item){
 body { background:#0f172a; color:white; font-family:Arial; }
 .glass { background:#1e293b; border-radius:15px; padding:20px; }
 .btn { background:#7c3aed; padding:10px 20px; border-radius:10px; margin:5px; }
-input { width:100%; padding:12px; border-radius:10px; color:black; }
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: #1e293b;   /* dark background */
+  color: white;          /* visible text */
+  border: 1px solid #334155;
+}
+
+/* Placeholder color */
+input::placeholder {
+  color: #94a3b8;
+}
+
+/* Focus effect (optional but good) */
+input:focus {
+  outline: none;
+  border: 1px solid #7c3aed;
+  box-shadow: 0 0 8px rgba(124,58,237,0.5);
+}
 </style>
 </head>
 
